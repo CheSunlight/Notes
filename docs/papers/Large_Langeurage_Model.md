@@ -15,8 +15,16 @@ Dzmitry Bahdanau(1), KyungHyun Cho(2), and Yoshua Bengio(2)
 
 #### 背景知识
 1. 对齐翻译
+
+   ![](image/2023-07-01-11-00.png)
+
+2. sequence2sequence
    
-3. sequence2sequence
+   encoder用RNN来构成，每个time-step向encoder中输入一个词的向量，直到句子的最后一个单词被输入，得到的输出为句向量
+   
+   decoder用另一个RNN来构成，用来根据之前encoder得到的句向量和前一时刻的结果来得到下个时刻的输出，依此类推直到得到结尾输出EOS.
+   ![](image/2023-07-01-11-08.png)
+
 ### 解决什么问题
 
 假设数据 $x$ 由某个包含隐变量 $z$ 的随机过程生成，$z$ 符合先验分布 $p_{\theta}(z)$，$x$ 则符合条件分布 $p_{\theta}(x|z)$。有以下两个问题：
