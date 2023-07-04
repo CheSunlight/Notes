@@ -18,27 +18,32 @@ Dzmitry Bahdanau(1), KyungHyun Cho(2), and Yoshua Bengio(2)
 
    ![](image/2023-07-01-11-00.png)
 
-2. sequence2sequence
+2. seq2seq模型
    
-   encoder用RNN来构成，每个time-step向encoder中输入一个词的向量，直到句子的最后一个单词被输入，得到的输出为句向量
+   encoder用RNN来构成，每个time-step向encoder中输入一个词的向量，直到句子的最后一个单词被输入，得到的输出为句向量。
    
-   decoder用另一个RNN来构成，用来根据之前encoder得到的句向量和前一时刻的结果来得到下个时刻的输出，依此类推直到得到结尾输出EOS.
+   decoder用另一个RNN来构成，用来根据之前encoder得到的句向量和前一时刻的结果来得到下个时刻的输出，依此类推直到得到结尾输出EOS。
    ![](image/2023-07-01-11-08.png)
 
 ### 解决什么问题
+传统的seq2seq模型有以下2个问题：
 
-假设数据 $x$ 由某个包含隐变量 $z$ 的随机过程生成，$z$ 符合先验分布 $p_{\theta}(z)$，$x$ 则符合条件分布 $p_{\theta}(x|z)$。有以下两个问题：
+1. 因为把源语言输入压缩为一个固定维度的向量C，这个向量表达能力有限，句子长时肯定会造成信息丢失。
+   
+2. 如果句子过长，即使是倒序输入，decoder最后的单元也未必记得住多少C的信息，依赖关系会很弱。
 
-1. 当 $p_{\theta}(x|z)$ 比较复杂时（比如非线性神经网络），边际似然（marginal likelihood）$p_{\theta}(x) = \int p_{\theta}(z) p_{\theta}(x|z) ~ \mathrm{d}z$ 和后验分布 $p_{\theta}(z|x) = \frac{p_{\theta}(x|z) p_{\theta}(z)}{p_{\theta}(x)}$ 都难以获得；
-2. 当数据集比较大时，用蒙特卡洛采样的方法来优化参数会很慢。
+### 解决什么问题
 
-在这种情况下，使用VAE（Variational Auto-Encoder）能
+通过注意力机制对齐的方式，decoder翻译到t个词时，从encoder里找t个词对应的信息用于翻译。
 
-1. 高效估计参数 $\theta$，这样可以模拟这个未知的随机过程；
-2. 高效估计后验分布 $p_{\theta}(z|x)$，这对于对数据 $x$ 编码的任务有用；
-3. 高效估计边际似然 $p_{\theta}(x)$，比如图片降噪、修补、提高分辨率任务。
 
-### 变分贝叶斯（Variational Bayes）
+
+### 注意力机制（Attention mechanism）作用
+Attention和常用的Full-Connection、RNN、CNN有什么区别呢？这种新的方法可以带来什么不一样的效果呢？
+
+> Intuitively, this implements a mechanism of attention in the decoder. The decoder decides parts of the source sentence to pay attention to. By letting the decoder have an attention mechanism, we relieve the encoder from the burden of having to encode all information in the source sentence into a fixedlength vector. With this new approach the information can be spread throughout the sequence of annotations, which can be selectively retrieved by the decoder accordingly.
+
+让解码部分具有注意力机制的功能，就是让解码部分可以选择性地使用编码部分的信息。
 
 - 泛函：函数中的自变量不是具体数值而是函数；
 - 变分：对泛函求微分。
