@@ -18,24 +18,29 @@ Dzmitry Bahdanau(1), KyungHyun Cho(2), and Yoshua Bengio(2)
 
    ![](image/2023-07-01-11-00.png)
 
-2. seq2seq模型
+2. LSTM
+   
+   ![](image/2023-07-02-21-39.png)
+
+3. seq2seq模型
    
    encoder用RNN来构成，每个time-step向encoder中输入一个词的向量，直到句子的最后一个单词被输入，得到的输出为句向量。
    
    decoder用另一个RNN来构成，用来根据之前encoder得到的句向量和前一时刻的结果来得到下个时刻的输出，依此类推直到得到结尾输出EOS。
+   
    ![](image/2023-07-01-11-08.png)
 
 ### 解决什么问题
+
 传统的seq2seq模型有以下2个问题：
 
-1. 因为把源语言输入压缩为一个固定维度的向量C，这个向量表达能力有限，句子长时肯定会造成信息丢失。
+1. 因为把源语言输入压缩为一个固定维度的向量c，这个向量表达能力有限，句子长时肯定会造成信息丢失。
    
-2. 如果句子过长，即使是倒序输入，decoder最后的单元也未必记得住多少C的信息，依赖关系会很弱。
+2. 如果句子过长，即使是倒序输入，decoder最后的单元也未必记得住多少c的信息，依赖关系会很弱。
 
-### 解决什么问题
+### 主要思路
 
 通过注意力机制对齐的方式，decoder翻译到t个词时，从encoder里找t个词对应的信息用于翻译。
-
 
 
 ### 注意力机制（Attention mechanism）作用
@@ -45,147 +50,52 @@ Attention和常用的Full-Connection、RNN、CNN有什么区别呢？这种新�
 
 让解码部分具有注意力机制的功能，就是让解码部分可以选择性地使用编码部分的信息。
 
-- 泛函：函数中的自变量不是具体数值而是函数；
-- 变分：对泛函求微分。
+### 注意力机制详解
+#### 1.结构设计
 
-变分贝叶斯的目的是用一个识别模型（recognition model）$q_{\phi}(z|x)$ 来估计难以获得的真实后验分布 $p_{\theta}(z|x)$。
+ ![](image/2023-07-02-20-52.png)
 
-> [!TIP|label:提示]
-> 假设输入数据 $x$ 和输出数据 $y$ ，生成式模型（generative model）和判别式模型（discriminative model）的目标都是得到条件分布 $p(y|x)$，但生成式模型通过拟合联合分布 $p(x,\ y)$，即拟合 $p(x|y)$ 和 $p(y)$，再通过贝叶斯定理——$p(y|x) = \frac{p(x|y) p(y)}{p(x)}$ 得到，而判别式模型则直接拟合目标条件分布 $p(y|x)$。识别模型则是生成式模型中用来估计 $p(x|y)$ 的模型。
+从上图可知，Decoder中每一时刻的输出是由好几个变量共同决定的，其中包含了Encoder中每一时刻的隐藏状态向量$(h_1,\cdots,h_n)$，和上一时刻的输出$y_{t-1}$，以及当前时刻Decoder中的隐藏状态向量$s_t$，可得，$p(y_t)=g(y_{t-1},s_t,attention_t(h_1,\codts,h_n))$。
 
-识别模型和真实后验分布的KL散度为
+传统RNN Encoder-Decoder 中t时刻的输出为$p(y_t)=g(y_{t-1},s_t,c_t)$，可以发现，本文不再使用固定的语义编码向量$c$，而是使用一个动态的语义编码向量$c_t$，它是由Encoder中每一时刻的隐藏状态向量计算得到，即$c_t=attention_t(h_1,\cdots,h_n)$。
 
-$$
-D_{\text{KL}}(q_{\phi}(z|x)||p_{\theta}(z|x)) = \mathrm{E}_{q_{\phi}(z|x)} \left( \log \frac{q_{\phi}(z|x)}{p_{\theta}(z|x)} \right) = \mathrm{E}_{q_{\phi}(z|x)} \left( \log \left( \frac{q_{\phi}(z|x)}{p_{\theta}(z,\ x)} p_{\theta}(x) \right) \right) = \mathrm{E}_{q_{\phi}(z|x)} \left( \log \frac{q_{\phi}(z|x)}{p_{\theta}(z,\ x)} \right) + \log p_{\theta}(x)
-$$
+#### 2.算法设计
 
-上式可以移项后写成
+(1) 如何计算t时刻的概率输出$y_t$?
 
-$$
-\log p_{\theta}(x) = \mathrm{E}_{q_{\phi}(z|x)} \left( \log \frac{p_{\theta}(z,\ x)}{q_{\phi}(z|x)} \right) + D_{\text{KL}}(q_{\phi}(z|x)||p_{\theta}(z|x))
-$$
+   t时刻的概率输出$y_t$，它由$y_{t-1}$,$c_t$和$s_t$共同决定，即$p(y_t)=g(y_{t-1},s_t,c_t)$。
 
-当固定参数 $\theta$，最小化KL散度即最大化变分下界 $\mathcal{L}(\theta,\ \phi;\ x) = \mathrm{E}_{q_{\phi}(z|x)} \left( \log \frac{p_{\theta}(z,\ x)}{q_{\phi}(z|x)} \right)$。
+(2) $c_t$和$s_t$如何得到？
 
-> [!TIP|label:提示]
-> KL散度是非负的，因此有 $\log p_{\theta}(x) \geqslant \mathrm{E}_{q_{\phi}(z|x)} \left( \log \frac{p_{\theta}(z,\ x)}{q_{\phi}(z|x)} \right)$，故称变分下界。
+   对于$s_t$，$s_t=f(y_{t-1},c_t,s_{t-1})$；对于$c_t$，它需要在attention作用下，由Encoder中每一时刻的隐藏状态向量$(h_1,\cdots,h_n)$一起计算得到，就有$c_t=\sum_{j=1}^n\alpha_{tj}h_j$，其中，$\alpha_{tj}$是attention计算得到的。
 
-变分下界可以进一步写成
+(3) $\alpha_{tj}$如何得到？
 
-$$
-\mathcal{L}(\theta,\ \phi;\ x) = - \mathrm{E}_{q_{\phi}(z|x)} \left( \log \frac{q_{\phi}(z|x)}{p_{\theta}(x|z) p_{\theta}(z)} \right) = - D_{\text{KL}}(q_{\phi}(z|x)||p_{\theta}(z)) + \mathrm{E}_{q_{\phi}(z|x)} \left( \log p_{\theta}(x|z) \right) 
-$$
+   $\alpha_{tj}=softmax(e_{tj})=\frac{exp(e_{tj})}{\sum_{k=1}^n exp(e_{tk})}$，其中$e_{tj}=a(s_{t-1},h_j)$是一个alignment model，对位置j的输入和位置i的输出的匹配程度进行评分。$a$是一个前向传播的网络（和Transformer的类余弦相似度的计算不同），这个网络的参数需要在训练中学习。
 
-则需要最小化的目标函数是
+可以看出，attention的计算有三个过程：第一步计算匹配得分$e$，第二步是对原始分值进行归一化处理得到$\alpha$，第三步使用$\alpha$对拟编码对象$(h_1,\cdots,h_n)$进行加权求和得到attention向量$c$。
 
-$$
-D_{\text{KL}}(q_{\phi}(z|x)||p_{\theta}(z)) - \mathrm{E}_{q_{\phi}(z|x)} \left( \log p_{\theta}(x|z) \right)
-$$
+attention的好处就是可以得到任务指向的重要信息，而不是那种重要但对任务无用的信息（本文是翻译某个单词的对齐信息）。这里贴原文的解释：
 
+> Let $\alpha_{ij}$ be a probability that the target word $y_i$ is aligned to, or translated from, a source word $x_j$. Then, the $i$-th context vector $c_i$ is the expected annotation over all the annotations with probabilities $x_j$.
 
-上式第一项是 $z$ 的先验与后验分布的KL散度，第二项则是重构误差。如果我们把识别模型 $q_{\phi}(z|x)$ 看作一个概率编码器（probabilistic encoder），即输入 $x$ 得到编码 $z$ 的分布，则 $p_{\theta}(x|z)$ 就是一个概率解码器（probabilistic decoder），而第二项就是衡量了概率编码器给出的 $z$ 能从概率解码器中恢复出 $x$ 的概率大小。通常第一项是可以正常积分得到的，因此整个目标函数可以看作是带正则化的重构误差。
+> The probability $\alpha_{ij}$, or its associated energy $e_{ij}$, reflects the importance of the annotation $h_j$ with respect to the previous hidden state $s_{i-1}$ in deciding the next state $s_{i}$ and generating $y_{i}$. Intuitively, this implements a mechanism of attention in the decoder. The decoder decides parts of the source sentence to pay attention to. By letting the decoder have an attention mechanism, we relieve the encoder from the burden of having to encode all information in the source sentence into a fixed-length vector. With this new approach the information can be spread throughout the sequence of annotations, which can be selectively retrieved by the decoder accordingly.
 
-整个优化过程可以看作两步：
+### 实验和结论
 
-1. 在固定参数 $\theta$ 的情况下优化 $\phi$ 使得变分下界最大，即识别模型 $q_{\phi}(z|x)$ 与真实后验分布 $p_{\theta}(z|x)$ 最接近；
-2. 在固定参数 $\phi$ 的情况下优化 $\theta$ 使得变分下界最大，但此时由于 $\theta$ 在变化，我们不再是最小化识别模型和真实后验分布的距离，而是将变分下界作为边际似然的估计值，目的是最大化边际似然。
+#### 1.实验结果
 
-形象一点就是变分下界追逐边际似然的过程。
+ ![](image/2023-07-02-21-14.png)
 
-### 重参数化（The reparametrization trick）
-
-由于概率编码器给出的是编码 $z$ 的分布，并不是一个确切的值，如果直接进行采样（比如蒙特卡洛），反向传播的时候是没有梯度信息的（因为采样是个离散的动作），而且费时费力，因此使用重参数化的技巧来生成 $z$，即将 $z$ 与一个可微变换 $g_{\phi}(\epsilon,\ x)$ 等价起来，其中 $\epsilon \sim p(\epsilon)$ 是一个服从噪声分布的辅助变量。
-
-因为 $z = g_{\phi}(\epsilon,\ x)$，我们有 $q_{\phi}(z|x) \mathrm{d}z = p(\epsilon) \mathrm{d}\epsilon$，则对于某一函数 $f(z)$，
-
-$$
-\mathrm{E}_{q_{\phi}(z|x)} (f(z)) = \int q_{\phi}(z|x) f(z) ~ \mathrm{d}z = \int p(\epsilon) f\left( g_{\phi}(\epsilon,\ x) \right) ~ \mathrm{d}\epsilon
-$$
-
-即可以生成 $L$ 个噪声，用 $\frac{1}{L}\sum\limits_{l=1}^{L} f\left( g_{\phi}\left( \epsilon^{(l)},\ x \right) \right) $ 来估计 $\mathrm{E}_{q_{\phi}(z|x)} (f(z))$。令 $f(z) = \log p_{\theta}(x|z)$，我们可以得到重构误差的估计。
-
-> [!NOTE|label:注意]
-> 当minibatch足够大时（比如100），噪声的数量 $L$ 可以是 $1$。
+从上表得知，RNNsearch均比RNNencdec的效果要好。其中，RNNsearch是加入了Bahdanau Attention的RNN Encoder-Decoder，RNNencdec是未加入的。
 
 
-### 高斯假设下的VAE
+#### 2.可视化效果
 
-令隐变量服从多元高斯分布：$p_{\bm{\theta}}(\bm{z}) = \mathcal{N}(\bm{z};\ \bm{0},\ \bm{I})$，再令 $p_{\bm{\theta}}(\bm{x}|\bm{z})$ 为参数由全连接层计算出来的多元高斯分布：
+ ![](image/2023-07-02-21-15.png)
 
-$$
-p_{\bm{\theta}}(\bm{x}|\bm{z}) = \mathcal{N}\left( \bm{x};\ \bm{\mu},\ \bm{\sigma}^{2}\bm{I} \right) 
-$$
+上面的4个图都是在RNNsearch-50上的结果。x轴和y轴分别是输入的英语和输出的法语，以及每一个输出的法语单词在所有输入英文单词上的注意力数值。
 
-其中
+例如，在图(a)中，法语单词 "accord" 的注意力基本上都集中在输入英文单词 "agreement" 上；法语单词 "été" 的注意力大部分集中在输入英文单词 "was" 和 "signed" 上。
 
-$$
-\bm{\mu} = \bm{W}_{\mu} \bm{h} + \bm{b}_{\mu} \\
-\log \bm{\sigma}^{2} = \bm{W}_{\sigma} \bm{h} + \bm{b}_{\sigma} \\
-\bm{h} = \tanh(\bm{W}_{h} \bm{z} + \bm{b}_{h}) \\
-\bm{\theta} = (\bm{W}_{\mu},\ \bm{W}_{\sigma},\ \bm{W}_{h},\ \bm{b}_{\mu},\ \bm{b}_{\sigma},\ \bm{b}_{h})
-$$
 
-即隐变量经过一个全连接层和tanh激活函数变换后，分别经过不同的全连接层计算出分布的均值和方差，这与高斯混合模型（GMM）有异曲同工之妙。在这种情况下，后验概率 $p_{\bm{\theta}}(\bm{z}|\bm{x})$ 是难以获得的。我们假设真实的后验分布跟协方差为对角矩阵（即只有方差没有协方差）的多元高斯分布长得很像，即我们想用 $q_{\bm{\phi}}\left( \bm{z}|\bm{x}^{(i)} \right)  = \mathcal{N}\left( \bm{z};\ \bm{\mu}^{(i)},\ \bm{\sigma}^{2 (i)} \bm{I} \right) $ 来近似真实的后验分布。
-
-> [!NOTE|label:注意]
-> VAE与普通自编码器的最大区别就在于VAE中隐变量具有先验假设。
-
-利用重参数化，我们让
-
-$$
-\bm{z}^{(i,\ l)} = g_{\bm{\phi}}\left( \bm{x}^{(i)},\ \bm{\epsilon}^{(l)} \right) = \bm{\mu}^{(i)} + \bm{\sigma}^{(i)} \odot \bm{\epsilon}^{(l)}
-$$
-
-其中 $\bm{\mu}^{(i)}$ 和 $\bm{\sigma}^{(i)}$ 的生成方法同上，噪声 $\bm{\epsilon}^{(l)} \sim \mathcal{N}(\bm{0},\ \bm{I})$，$\odot$ 代表对应元素相乘。
-
-> [!NOTE|label:注意]
-> 如果这个变换不加入噪声，则为普通自编码器。
-
-在这种情况下，目标函数的第一项（KL散度）是可以正常积分得到的，只需要估计第二项，即重构误差。则变分下界
-
-$$
-\mathcal{L}\left( \bm{\theta},\ \bm{\phi},\ \bm{x}^{(i)} \right) \approx \frac{1}{2}\sum\limits_{j=1}^{J} \left( 1 + \log \sigma_j^{2(i)} - \mu_j^{2(i)} - \sigma_j^{2(i)} \right) + \frac{1}{L}\sum\limits_{l=1}^{L} \log p_{\bm{\theta}}\left( \bm{x}^{(i)}|\bm{z}^{(i,\ l)} \right) 
-$$
-
-其中 $j$ 代表第 $j$ 个元素。
-
-最终算法如下：
-
-<div align='center'>
-
-![](image/2022-10-19-17-30-14.png)
-
-算法流程
-</div align='center'>
-
-目标函数的第一项（KL正则项）只与 $\bm{\phi}$ 有关，因此只有编码器需要用它来更新参数；第二项（重构误差）与 $\bm{\theta}$ 和 $\bm{\phi}$ 都有关，因此编码器和解码器都要用它来更新参数。
-
-### 其他同类算法
-
-Wake-Sleep算法（Hinton等，1995）是当时仅有的应用于连续隐变量模型的算法，这个算法的优点在于既可以在连续隐变量模型上应用，也可以应用在离散的隐变量模型上；但它要同时优化两个目标函数，而这两个目标函数并不能一起最优化边际似然。
-
-### 实验
-
-<div align='center'>
-
-![](image/2022-10-18-19-50-54.png)
-
-MNIST和Frey Face数据库中不同隐变量个数下AEVB（本文算法）与Wake-Sleep算法在变分下界上的比较
-</div align='center'>
-
-可以看到AEVB收敛更快，变分下界更高，即后验分布越接近真实后验。而且随着隐变量数量的增加，模型并没有出现严重的过拟合现象，因为目标函数中除了重构误差还有正则项。
-
-<div align='center'>
-
-![](image/2022-10-18-19-55-11.png)
-
-MINIST不同样本量下AEVB，Wake-Sleep和MCEM（蒙特卡洛EM算法）在边际似然上的比较
-</div align='center'>
-
-样本量小时，AEVB略逊于MCEM，因为是通过重参数化来避免直接采样，效果比直接采样稍差也算正常；但样本量一旦大起来，MCEM就收敛很慢，而AEVB则能很快收敛且比Wake-Sleep好。
-
-### 参考文献
-
-Kingma, D. P., & Welling, M. (2014). Auto-Encoding Variational Bayes (arXiv:1312.6114). arXiv. http://arxiv.org/abs/1312.6114
-
-Hinton, G. E., Dayan, P., Frey, B. J., & Neal, R. M. (1995). The “Wake-Sleep” Algorithm for Unsupervised Neural Networks. Science, New Series, 268(5214), 1158–1161.
