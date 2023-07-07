@@ -99,3 +99,87 @@ attention的好处就是可以得到任务指向的重要信息，而不是那�
 例如，在图(a)中，法语单词 "accord" 的注意力基本上都集中在输入英文单词 "agreement" 上；法语单词 "été" 的注意力大部分集中在输入英文单词 "was" 和 "signed" 上。
 
 
+# Attention is All You Need
+
+#### 作者
+
+ ![](image/2023-07-03-17-40.png)
+
+#### 收录情况
+
+收录于Neurips2017。
+
+### 论文信息
+
+ ![](image/2023-07-03-17-35.png)
+ 
+不同于《NEURAL MACHINE TRANSLATION BY JOINTLY LEARNING TO ALIGN AND TRANSLATE》，本文完全抛弃了RNN和CNN等网络结构，设计了原始Transformer模型的结构。该模型由编码器和解码器两部分组成，这两个部分在后续模型中分离成两个独立的模块。此外，该论文还引入了缩放点积注意力机制 （Scaled Dot Product Attention Mechanism） 、多头注意力机制 （Multi-head Attention Blocks） 和位置编码 （Positional Input Encoding） 等概念，这些概念仍然是现代 Transformer 系列模型的基础。
+
+介绍略
+
+ 
+# BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding
+
+#### 作者
+ 
+Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova
+
+Google AI Language
+
+#### 收录情况
+
+NAACL-HLT 2019最佳论文
+
+
+#### 背景知识
+1. 
+
+
+# (GPT-1) Improving Language Understanding by Generative Pre-Training
+
+#### 作者
+ 
+Alec Radford, Karthik Narasimhan, Tim Salimans, and Ilya Sutskever
+
+OpenAI
+
+
+#### 收录情况
+
+是一篇技术报告，没有发表在期刊或会议上
+
+#### 背景知识
+
+1. 生成式模型（generative model）和判别式模型（discriminative model）
+   
+机器学习模型可以分为生成式模型和判别式模型：
+
+生成式模型建模联合概率$P(X,Y)$，然后根据贝叶斯公式$P(X,Y)=P(X)P(Y|X)$来计算$P(Y|X)$，例如VAE、GAN等模型；
+
+判别式模型直接建模条件概率$P(Y|X)$。
+
+2. 自监督预训练模型
+
+### 研究动机
+
+尽管大量未标记的文本语料库很丰富，但是用于学习这些特定任务的标记数据却很少，通过判别模型难以得到好的效果；
+
+
+### 主要思路
+
+以Transformer为backbone，形成“生成式预训练（任务无关）+判别式微调（任务相关）”的训练范式，实现强大的自然语言理解，通过对众多的长文本语料进行预训练，模型获得了大量知识和处理长时序依赖的能力；然后成功地迁移到解决下游任务，如语义匹配、自然语言推断和文本分类等任务。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
