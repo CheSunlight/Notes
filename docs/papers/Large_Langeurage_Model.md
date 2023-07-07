@@ -152,11 +152,11 @@ OpenAI
 
 1. 生成式模型（generative model）和判别式模型（discriminative model）
    
-机器学习模型可以分为生成式模型和判别式模型：
+   机器学习模型可以分为生成式模型和判别式模型：
 
-生成式模型建模联合概率$P(X,Y)$，然后根据贝叶斯公式$P(X,Y)=P(X)P(Y|X)$来计算$P(Y|X)$，例如VAE、GAN等模型；
+   生成式模型建模联合概率$P(X,Y)$，然后根据贝叶斯公式$P(X,Y)=P(X)P(Y|X)$来计算$P(Y|X)$，例如VAE、GAN等模型；
 
-判别式模型直接建模条件概率$P(Y|X)$，例如SVM分类模型。
+   判别式模型直接建模条件概率$P(Y|X)$，例如SVM分类模型。
 
 2. NLP的预训练模型
    
@@ -165,6 +165,10 @@ OpenAI
    词嵌入向量是单词表征学习的最细粒度。通过统计学习或深度学习方法，文本中的单词被映射至向量空间中的密集向量。
 
    句子和段落级别的嵌入表征被提出，更多的数据特征被获取，进一步提升了预训练效果。相比于从头开始的词嵌入训练，预训练的引入对于各类任务的性能具有显著的提升效果。
+
+3. 辅助任务学习（多任务）
+
+   增加多任务的优化目标（无监督或无监督），通过对共享知识的学习可能会提高性能。
    
 
 ### 研究动机
@@ -177,20 +181,82 @@ pre-trained word embedding存在两个问题，第一是并不清楚哪种优化
 
 ### 主要思路
 
-以Transformer为backbone，形成“生成式预训练（任务无关）+判别式微调（任务相关）”的训练范式，实现强大的自然语言理解，通过对众多的长文本语料进行无监督预训练，模型获得了大量知识和处理长时序依赖的能力；然后成功地迁移到解决下游监督任务，如语义匹配、自然语言推断和文本分类等任务。也就是说，可以从海量数据集中初步获取潜在的特征规律，再将这些共性特征移植到特定的任务模型中去，将学习到的知识进行迁移
+形成“生成式预训练（无监督且任务无关）+判别式微调（监督且任务相关）”的训练范式，两阶段数据的语料库不要求属于同一领域。通过对众多的长文本语料进行无监督预训练，模型获得了大量知识和处理长时序依赖的能力；然后成功地迁移到解决下游监督任务，如语义匹配、自然语言推断和文本分类等任务。也就是说，可以从海量数据集中初步获取潜在的特征规律，再将这些共性特征移植到特定的任务模型中去，将学习到的知识进行迁移
 
-与以前的方法相比，本文在微调期间使用任务感知输入转换来实现有效的迁移，也只需要对模型架构进行最少的修改。
+本文在通过将不同的任务在输出层面进行统一，来实现有效的迁移，也只需要对模型架构进行最少的修改。
+
+以Transformer为backbone，能够提供结构化的记忆和长时序的依赖（更强的上下文建模能力），带来鲁邦的迁移效果。
+
+> This model choice provides us with a more structured memory for handling long-term dependencies in text, compared to alternatives like recurrent networks, resulting in robust transfer performance across diverse tasks
+
+ ![](image/2023-07-03-19-53.png)
 
 方法在多个任务上都超过传统的判别式模型。
 
+### 方法框架
+
+1. 无监督预训练
+
+使用标准的语言优化目标：
+
+ ![](image/2023-07-03-20-12.png)
+
+ 使用多层Transformer decoder进行输出：
+
+ ![](image/2023-07-03-20-15.png)
+
+2. 监督微调
+
+输入a sequence of input tokens $x^1,\codts,x^m$和标注$y$，经过预训练模型得到transformer blocks的输出$h_l^m$，输入到一个简单的线性层去预测y：
+
+ ![](image/2023-07-03-20-19.png)
+
+优化目标函数为：
+
+ ![](image/2023-07-03-20-20.png)
+
+ 这里将预训练目标设计为辅助任务，提高监督的泛化性和加速收敛，得到
+ 
+ ![](image/2023-07-03-20-21.png)
+
+ 值得注意的是，微调只优化参数矩阵$W^y$以及分隔符（后面会介绍）。
+
+ 
+ 3. 任务特定输入变换
+
+不同任务输入不一样的，需要将输入统一化，下游任务可能不是label的预测。将特定任务结构化的输入，转换成预训练模型中的有序序列，避免对网络架构的修改。
+
+ ![](image/2023-07-03-20-30.png)
+
+具体变换如图，左边是Transformer架构，可以直接完成文本预测和文本分类。
+
+文本分类：加一个开始和终止的tokens，输入到Transformer中，进行预分类；
+
+文本蕴含（textual entailment，如果一个人读了句子t能够推论h非常可能是真实的，那么t蕴涵h）：使用开始、结束和分隔符，凭借两个句子输入到Transformer；
+
+语义匹配：使用开始、结束和分隔符，两个句子分别拼接（全序拼接），分别输入到Transformer中，加到一起进行预测；
+
+多选题（根据context选择正确的answer）：使用开始、结束和分隔符，将问题和答案拼接，输入到Transformer中，分别进行预测；
+ 
+
+### 实验
 
 
+![](image/2023-07-03-20-52.png)
+
+Natural Language Inference任务中（两句话蕴含、矛盾或无关的预测），在最后一个RTE数据集上没有取得最好的结果，因为[64]用了多任务（额外的辅助任务）
+
+> On RTE, one of the smaller datasets we evaluate on (2490 examples), we achieve an accuracy of 56%, which is below the 61.7% reported by a multi-task biLSTM model. Given the strong performance of our approach on larger NLI datasets, it is likely our model will benefit from multi-task training as well but we have not explored this currently
 
 
+### 分析
 
 
+![](image/2023-07-03-20-58.png)
 
+Transformer层数影响：预训练都用，微调时用的层数越多效果越好；
 
+零样本（zero-shot）行为：不进行微调，仅仅预训练，然后使用启发式方法进行测试。图中看到一般预训练越多效果越好，Transformer比LSTM好。一个简单的启发式方法是，对于文本情感分析任务，在原句子后面加上very的单词，使用预训练的文本预测，进行“positive”和“negative”的预测，从而得到情感分类结果。类似promote learning方式（在GPT-3中的重点研究）。
 
 
 
