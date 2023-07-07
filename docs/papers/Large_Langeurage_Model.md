@@ -156,18 +156,35 @@ OpenAI
 
 生成式模型建模联合概率$P(X,Y)$，然后根据贝叶斯公式$P(X,Y)=P(X)P(Y|X)$来计算$P(Y|X)$，例如VAE、GAN等模型；
 
-判别式模型直接建模条件概率$P(Y|X)$。
+判别式模型直接建模条件概率$P(Y|X)$，例如SVM分类模型。
 
-2. 自监督预训练模型
+2. NLP的预训练模型
+   
+   基于特征的无监督方法，即pre-trained word embedding，首先将文本级别的输入输出为特征向量的形式，再将预训练好的嵌入向量作为下游任务的输入。
+
+   词嵌入向量是单词表征学习的最细粒度。通过统计学习或深度学习方法，文本中的单词被映射至向量空间中的密集向量。
+
+   句子和段落级别的嵌入表征被提出，更多的数据特征被获取，进一步提升了预训练效果。相比于从头开始的词嵌入训练，预训练的引入对于各类任务的性能具有显著的提升效果。
+   
 
 ### 研究动机
 
-尽管大量未标记的文本语料库很丰富，但是用于学习这些特定任务的标记数据却很少，通过判别模型难以得到好的效果；
+尽管大量未标记的文本语料库很丰富，但是用于学习这些特定任务的标记数据却很少，仅使用这些数据传统的判别模型难以得到好的效果，一定程度缓解了数据标注（成本、质量、数量等）对AI模型的限制。
 
+pre-trained word embedding存在两个问题，第一是并不清楚哪种优化目标会学到能很好transfer不同NLP任务的embedding，第二是将学习到的embedding迁移到目标任务上没有一个有效的统一方法
+
+> Leveraging more than word-level information from unlabeled text, however, is challenging for two main reasons. First, it is unclear what type of optimization objectives are most effective at learning text representations that are useful for transfer. Recent research has looked at various objectives such as language modeling [44], machine translation [38], and discourse coherence [22], with each method outperforming the others on different tasks.1 Second, there is no consensus on the most effective way to transfer these learned representations to the target task. Existing techniques involve a combination of making task-specific changes to the model architecture [43, 44], using intricate learning schemes [21] and adding auxiliary learning objectives [50]. These uncertainties have made it difficult to develop effective semi-supervised learning approaches for language processing.
 
 ### 主要思路
 
-以Transformer为backbone，形成“生成式预训练（任务无关）+判别式微调（任务相关）”的训练范式，实现强大的自然语言理解，通过对众多的长文本语料进行预训练，模型获得了大量知识和处理长时序依赖的能力；然后成功地迁移到解决下游任务，如语义匹配、自然语言推断和文本分类等任务。
+以Transformer为backbone，形成“生成式预训练（任务无关）+判别式微调（任务相关）”的训练范式，实现强大的自然语言理解，通过对众多的长文本语料进行无监督预训练，模型获得了大量知识和处理长时序依赖的能力；然后成功地迁移到解决下游监督任务，如语义匹配、自然语言推断和文本分类等任务。也就是说，可以从海量数据集中初步获取潜在的特征规律，再将这些共性特征移植到特定的任务模型中去，将学习到的知识进行迁移
+
+与以前的方法相比，本文在微调期间使用任务感知输入转换来实现有效的迁移，也只需要对模型架构进行最少的修改。
+
+方法在多个任务上都超过传统的判别式模型。
+
+
+
 
 
 
