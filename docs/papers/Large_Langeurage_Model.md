@@ -118,21 +118,7 @@ attention的好处就是可以得到任务指向的重要信息，而不是那�
 介绍略
 
  
-# BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding
 
-#### 作者
- 
-Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova
-
-Google AI Language
-
-#### 收录情况
-
-NAACL-HLT 2019最佳论文
-
-
-#### 背景知识
-1. 
 
 
 # (GPT-1) Improving Language Understanding by Generative Pre-Training
@@ -259,8 +245,28 @@ Transformer层数影响：预训练都用，微调时用的层数越多效果越
 零样本（zero-shot）行为：不进行微调，仅仅预训练，然后使用启发式方法进行测试。图中看到一般预训练越多效果越好，Transformer比LSTM好。一个简单的启发式方法是，对于文本情感分析任务，在原句子后面加上very的单词，使用预训练的文本预测，进行“positive”和“negative”的预测，从而得到情感分类结果。类似promote learning方式（在GPT-3中的重点研究）。
 
 
+消融实验
+
+![](image/2023-07-03-21-11.png)
+
+大数据下，微调时使用辅助任务效果更好，小数据下反而会下降；
+
+使用预训练效果明显；
+
+Transformer效果好于LSTM。
 
 
+# BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding
+
+#### 作者
+ 
+Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova
+
+Google AI Language
+
+#### 收录情况
+
+NAACL-HLT 2019最佳论文
 
 
 
