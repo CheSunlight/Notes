@@ -129,6 +129,9 @@ Alec Radford, Karthik Narasimhan, Tim Salimans, and Ilya Sutskever
 
 OpenAI
 
+Alec Radford：DCGAN、PPO(instructGPT)，GPT-1,2,3
+
+Ilya Sutskever：AlexNet二作，openai CTO
 
 #### 收录情况
 
@@ -417,7 +420,7 @@ OpenAI
 
 #### 收录情况
 
-OpenAI blog？
+OpenAI blog？出现于BERT四个月后
 
 
 #### 背景知识
@@ -427,6 +430,8 @@ OpenAI blog？
 
 
 ### 主要思路
+
+比BERT还大
 
 
 ### 方法框架
