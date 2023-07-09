@@ -396,6 +396,13 @@ CoNLL-2003 NER：判断一个句子中的单词是不是人名Person，组织名
 
 
 
+### 实验
 
+![](image/2023-07-05-11-28.png)
 
+BERT-BASE (L=12, H=768, A=12, Total Parameters=110M) and BERT-LARGE (L=24, H=1024, A=16, Total Parameters=340M)，实验结果达到state-ot-the-art。
+
+消融研究如下：
+
+![](image/2023-07-05-11-33.png)
 
