@@ -626,7 +626,7 @@ GPT-3和GPT-2的模型差不多(Sparse Transformer），GPT-2和GPT-1差不多�
 3. 能耗
 
 
-# Training language models to follow instructions with human feedback
+# (InstructGPT) Training language models to follow instructions with human feedback
 
 #### 作者
  
@@ -668,12 +668,134 @@ Fine-tuning with human feedback（标注？）：首先，收集一些“问题+
 
 ### 方法框架
 
+未完待续。。。
 
 
+# GPT-4 Technical Report
+
+#### 作者
+ 
+![](image/2023-07-09-19-56.png)
 
 
+#### 收录情况
+
+无
+
+#### 背景知识
+
+GPT-1,2,3, InstructGPT?
 
 
+### 主要思路
+
+![](image/2023-07-09-19-57.png)
+
+基本没有太多的细节，更多的是实验结果，这里介绍GPT-4的能力。
+
+GPT-4可以接受文字和图片的输入，比不过真是世界的人类表现，但是在专业性和学术性的任务上，能达到甚至超过人，例如考试、面试、写代码等。
 
 
+### 训练过程（稳定性）
+
+预训练任务预测下一个词，RLHF（reinforcement learning with human feedback）微调。
+
+一个可用的结论是，模型能力从预训练得到（数据和算力），RLHF在并不能提高考试成绩，RLHF目的是做控制，alignment受控制。
+
+实现了predictable scaling的目标，在GPT-4刚开始训练时就可以准确预测最终的loss（使用1/10000的计算资源即可）
+
+![](image/2023-07-09-20-08.png)
+
+优势在于投入资源前可以有一个预期的结果（meta-AI）
+
+![](image/2023-07-09-20-09.png)
+
+
+设计了一些针对大模型陷阱hindsight neglect任务，模型越大反而结果越差，直到GPT-4的出现
+
+![](image/2023-07-09-20-10.png)
+
+hindsight neglect任务指的是，本身用理性的结果做了决断，但是结果不好，如果时间倒流，是继续理性还是选择高风险的选择，如上图结果，大模型越大越不理性，只是根据偶然性的结果来判断。
+
+![](image/2023-07-09-20-15.png)
+
+![](image/2023-07-09-20-16.png)
+
+
+结论，感觉什么都没说。
+
+### 能力
+
+1.考试
+
+![](image/2023-07-09-20-18.png)
+
+AMC微积分效果不好，Codeforces编程不熬，英语文学也不好
+
+![](image/2023-07-09-20-20.png)
+
+律师资格证、法学院入学、美国大学入学考试、GRE、奥赛等等都是很好的
+
+存在的一个问题，2021的数据codeforces的编程题做的对而之后做的不好。
+ 
+2. NLP传统任务
+
+![](image/2023-07-09-20-25.png)
+
+高于language model，和其他的fine-tuning也可比较。
+
+一些错误
+
+![](image/2023-07-09-20-29.png)
+
+
+3. 视觉语言
+
+Demo
+
+![](image/2023-07-09-20-31.png)
+
+![](image/2023-07-09-20-33.png)
+
+![](image/2023-07-09-20-34.png)
+
+指标
+
+![](image/2023-07-09-20-35.png)
+
+4. 可操纵性 steerablilty
+
+system message定义ai用什么语气风格说话
+
+![](image/2023-07-09-20-36.png)
+
+![](image/2023-07-09-20-37.png)
+
+![](image/2023-07-09-20-38.png)
+
+
+5. 其他
+
+![](image/2023-07-09-20-40.png)
+
+
+### Limitations
+
+不完全可靠，可能会捏造事实，高风险领域还是小心慎用
+
+存在大量偏见
+
+缺少2021年9月的知识
+
+容易受骗
+
+过于自信，不论回答是否正确
+
+### 安全性
+
+找专家确认哪些问题不能回答（人力过程）
+
+RLHF方法自动给出safety的reward
+
+![](image/2023-07-09-20-44.png)
 
