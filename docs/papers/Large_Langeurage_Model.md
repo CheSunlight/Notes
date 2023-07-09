@@ -275,12 +275,127 @@ NLP的预训练模型：feature-based的预训练语言模型（word embedding�
 
 ### 研究动机
 
+![](image/2023-07-05-10-23.png)
+
 1. 已有的NLP预训练模型的结构会受到单向语言模型（从左到右或者从右到左）的限制，因而也限制了模型的表征能力，使其只能获取单方向的上下文信息。
 
 > We argue that current techniques restrict the power of the pre-trained representations, especially for the fine-tuning approaches. The major limitation is that standard language models are unidirectional, and this limits the choice of architectures that can be used during pre-training. For example, in OpenAI GPT, the authors use a left-to-right architecture, where every token can only attend to previous tokens in the self-attention layers of the Transformer (Vaswani et al., 2017). Such restrictions are sub-optimal for sentence-level tasks, and could be very harmful when applying fine-tuning based approaches to token-level tasks such as question answering, where it is crucial to incorporate context from both directions.
 
 ### 主要思路
-BERT强调了不再像以往一样采用传统的单向语言模型或者把两个单向语言模型进行浅层拼接的方法进行预训练，而是采用新的masked language model（MLM），以致能生成深度的双向语言表征，并且采用深层的双向Transformer组件（单向的Transformer一般被称为Transformer decoder，其每一个token（符号）只会attend到目前往左的token。而双向的Transformer则被称为Transformer encoder，其每一个token会attend到所有的token）来构建整个模型，因此最终生成能融合左右上下文信息的深层双向语言表征。
+
+该模型有以下主要优点：
+
+1）采用masked language model（MLM）对双向的Transformers进行预训练，以生成深层的双向语言表征。
+
+2）预训练后，只需要添加一个额外的输出层进行fine-tune，就可以在各种各样的下游任务中取得state-of-the-art的表现。在这过程中并不需要对BERT进行任务特定的结构修改。
+
+总结一下，BERT强调了不再像以往一样采用传统的单向语言模型或者把两个单向语言模型进行浅层拼接的方法进行预训练，而是采用新的masked language model（MLM），以致能生成深度的双向语言表征，并且采用深层的双向Transformer组件（单向的Transformer一般被称为Transformer decoder，其每一个token（符号）只会attend到目前往左的token。而双向的Transformer则被称为Transformer encoder，其每一个token会attend到所有的token）来构建整个模型，因此最终生成能融合左右上下文信息的深层双向语言表征。
+
+
+### 方法框架
+
+“预训练+微调”的方法框架和GPT是一样的，对于不同的下游任务，BERT的结构可能会有不同的轻微变化。
+
+1. 预训练方法框架
+
+![](image/2023-07-05-10-48.png)
+
+如图所示，BERT的主题部分就是由多个Transformer encoder层堆叠在一起。
+
+2. 输入输出
+
+![](image/2023-07-05-10-56.png)
+
+BERT的输入为每一个token对应的embedding（图中的粉红色块就是token，黄色块就是token对应的embedding），并且单词字典是采用WordPiece算法来进行构建的（后面介绍）。为了完成具体的分类任务，除了单词的token之外，作者还在输入的每一个序列开头都插入特定的分类token（[CLS]），该分类token对应的最后一个Transformer层输出被用来起到聚集整个序列信息的作用，类似LSTM中的C。
+
+为了应对各种各样的自然语言任务，BERT模型所输入的序列必须有能力包含一句话（文本情感分类，序列标注任务）或者两句话以上（自然语言推断，问答任务）。因此BERT的输入如下：
+
+
+每个input tokens包括单词本身的token embedding、指示单词属于哪个句子的segment embeddings以及单词位置的position embeddings。设计了[CLS]的tokens聚合整个句子的信息，[SEP]的tokens分隔不同的句子。
+
+WordPiece算法类似词根拆解的形式，将例如“playing”拆解成“play”和“##ing”，目的是减少整个词表中所使用的单词总数（百万级词表->万级别）。
+
+![](image/2023-07-05-11-05.png)
+
+如图所示，C为分类token（[CLS]）对应最后一个Transformer的输出，$T_i$则代表其他token对应最后一个Transformer的输出。对于一些token级别的任务（如，序列标注和问答任务），就把$T_i$输入到额外的输出层中进行预测。对于一些句子级别的任务（如，自然语言推断和情感分类任务），就把C输入到额外的输出层中，这里也就解释了为什么要在每一个token序列前都要插入特定的分类token。
+
+3. 自监督预训练任务设计
+
+3.1  Masked Language Model（MLM）
+
+MLM是BERT能够不受单向语言模型所限制的原因。就是以15%的概率用mask token（[MASK]）随机地对每一个训练序列中的token进行替换，然后预测出[MASK]位置原有的单词。然而，由于[MASK]并不会出现在下游任务的微调（fine-tuning）阶段，因此预训练阶段和微调阶段之间产生了不匹配（这里很好解释，就是预训练的目标会令产生的语言表征对[MASK]敏感，但是却对其他token不敏感）。因此BERT采用了以下策略来解决这个问题：
+
+首先在每一个训练序列中以15%的概率随机地选中某个token位置用于预测，假如是第i个token被选中，则会被替换成以下三个token之一
+
+1）80%的时候是[MASK]。如，my dog is hairy——>my dog is [MASK]
+
+2）10%的时候是随机的其他token。如，my dog is hairy——>my dog is apple
+
+3）10%的时候是原来的token（保持不变，作为2）所对应的负类）。如，my dog is hairy——>my dog is hairy
+
+再用该位置对应的$T_i$去预测出原来的token（输入到全连接，然后用softmax输出每个token的概率，最后用交叉熵计算loss）。
+
+该策略令到BERT不再只对[MASK]敏感，而是对所有的token都敏感，以致能抽取出任何token的信息。
+
+
+3.2 Next Sentence Prediction（NSP）
+当每个选择输入句子A和B时，50％的时间B是跟着A（标记为ISNEXT）的实际下一个句子，而50％的时间是来自语料库的随机句子（标记为NotNext）
+
+最后训练样例长这样：
+
+Input1=[CLS] the man went to [MASK] store [SEP] he bought a gallon [MASK] milk [SEP]
+
+Label1=IsNext
+
+Input2=[CLS] the man [MASK] to the store [SEP] penguin [MASK] are flight ##less birds [SEP]
+
+Label2=NotNext
+
+通过这种方式，学习到句子间相关联系。
+
+4. 微调方法框架
+
+在海量单语料上训练完BERT之后，便可以将其应用到NLP的各个任务中了，如图所示：
+
+![](image/2023-07-05-11-14.png)
+
+（a）基于句子对的分类任务：
+
+MNLI：给定一个前提 (Premise) ，根据这个前提去推断假设 (Hypothesis) 与前提的关系。该任务的关系分为三种，蕴含关系 (Entailment)、矛盾关系 (Contradiction) 以及中立关系 (Neutral)。所以这个问题本质上是一个分类问题，需要做的是去发掘前提和假设这两个句子对之间的交互信息。
+
+QQP：判断Quora上的两个问题句是否表示的是一样的意思。
+
+QNLI：用于判断文本是否包含问题的答案，类似于做阅读理解定位问题所在的段落。
+
+STS-B：预测两个句子的相似性，包括5个级别。
+
+MRPC：判断两个句子是否是等价的。
+
+RTE：类似于MNLI，但是只是对蕴含关系的二分类判断，而且数据集更小。
+
+SWAG：从四个句子中选择为可能为前句下文的那个。
+
+
+（b）基于单个句子的分类任务
+
+SST-2：电影评价的情感分析。
+
+CoLA：句子语义判断，是否是可接受的（Acceptable）。
+
+BERT的微调方法是根据[CLS]标志生成一组特征向量$C$，并通过一层全连接进行微调。损失函数根据任务类型自行设计，例如多分类的softmax或者二分类的sigmoid。
+
+
+
+（c）问答任务
+
+SQuAD v1.1：给定一个句子（通常是一个问题）和一段描述文本，输出这个问题的答案，类似于做阅读理解的简答题。如图(c)表示的，SQuAD的输入是问题和描述文本的句子对。输出是特征向量，通过在描述文本上接一层激活函数为softmax的全连接来获得输出文本的条件概率。
+
+（d）命名实体识别
+
+CoNLL-2003 NER：判断一个句子中的单词是不是人名Person，组织名称Organization，地名Location，或者无命名实体other。微调CoNLL-2003 NER时将整个句子作为输入，在每个时间片输出一个概率，并通过softmax得到这个Token的实体类别。
+
+
+
 
 
 
