@@ -406,3 +406,28 @@ BERT-BASE (L=12, H=768, A=12, Total Parameters=110M) and BERT-LARGE (L=24, H=102
 
 ![](image/2023-07-05-11-33.png)
 
+
+# BERT: Language Models are Unsupervised Multitask Learners
+
+#### 作者
+ 
+Alec Radford, Jeffrey Wu, Rewon Child, David Luan, Dario Amodei, and Ilya Sutskever
+
+OpenAI
+
+#### 收录情况
+
+OpenAI blog？
+
+
+#### 背景知识
+
+
+### 研究动机
+
+
+### 主要思路
+
+
+### 方法框架
+
