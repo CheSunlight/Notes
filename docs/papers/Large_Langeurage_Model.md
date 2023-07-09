@@ -401,6 +401,8 @@ CoNLL-2003 NER：判断一个句子中的单词是不是人名Person，组织名
 
 ### 实验
 
+数据集使用了BooksCorpus（800M words）和English Wikipedia（2500 M words），而GPT只用了BooksCorpus（800M words）
+
 ![](image/2023-07-05-11-28.png)
 
 BERT-BASE (L=12, H=768, A=12, Total Parameters=110M) and BERT-LARGE (L=24, H=1024, A=16, Total Parameters=340M)，实验结果达到state-ot-the-art。
@@ -425,14 +427,91 @@ OpenAI blog？出现于BERT四个月后
 
 #### 背景知识
 
+Zero-shot learning （ZSL）:上述例子中包含了一个人类的推理过程，就是利用过去的知识（马，老虎，熊猫和斑马的描述），在脑海中推理出新对象的具体形态，从而能对新对象进行辨认。（如图所示）ZSL就是希望能够模仿人类的这个推理过程，使得计算机具有识别新事物的能力。ZSL就是希望我们的模型能够对其从没见过的类别进行分类，让机器具有推理能力，实现真正的智能。其中零次（Zero-shot）是指对于要分类的类别对象，一次也不学习。
+
+![](image/2023-07-06-14-42.png)
+
+Multitask learning：如图所示，单任务学习（single task learning）：一个loss，一个任务，例如NLP里的情感分类、NER任务一般都是可以叫单任务学习。多任务学习（multi task learning）：简单来说有多个目标函数loss同时学习的就算多任务学习。
+
+![](image/2023-07-06-14-45.png)
 
 ### 研究动机
+
+1. BERT使用Transformer encoder，用更大的数据（3.4亿）和模型效果比GPT-1好
+   
+2. 主流deep learning范式对每一个任务收集一个数据集，在上面模型训练和预测。原因是模型泛化性不好。现有pre-training的NLP方法（GPT-1和BERT）在下游任务还需要为每人任务收集监督的数据进行finetuning，导致拓展到新任务上有一定成本
+
+> The dominant approach to creating ML systems is to collect a dataset of training examples demonstrating correct behavior for a desired task, train a system to imitate these behaviors, and then test its performance on independent and identically distributed (IID) held-out examples. This has served well to make progress on narrow experts. But the often erratic behavior of captioning models (Lake et al., 2017), reading comprehension systems (Jia & Liang, 2017), and image classifiers (Alcorn et al., 2018) on the diversity and variety of possible inputs highlights some of the shortcomings of this approach.
+
+> Our suspicion is that the prevalence of single task training on single domain datasets is a major contributor to the lack of generalization observed in current systems. Progress towards robust systems with current architectures is likely to require training and measuring performance on a wide range of domains and tasks. Recently, several benchmarks have been proposed such as GLUE (Wang et al., 2018) and decaNLP (McCann et al., 2018) to begin studying this
 
 
 ### 主要思路
 
-比BERT还大
-
+本文要继续使用Transformer decoder，使用更大的模型（15亿）和更多的数据。考虑到在传统的任务中比BERT效果提升不明显，以及拓展新任务的成本，所以选择了zero-shot，即做下游任务不需要标注的数据（不需要有监督微调）
 
 ### 方法框架
+
+整体方法框架和GPT-1近似，这里只介绍不同的地方。这里的Zero-shot实现的总体思路是下游任务的输入和pre-training的输入保持一致（提示prompt）。传统方法针对某个任务来说，其目标就是$p(output|input)$。本文需要在输入相同但任务不同的情况下，输出不同结果（即针对相同输入，由于任务种类不一样，对应的输出就不同）。所以，本文针对某个任务其目标就是学习$p(output|input,task)$，作者在原文把这种称为Task conditioning。实现这种Task conditioning有两种方法，一种是模型结构层面（architectural level），另一种是算法层面的（algorithmic level）。模型结构（architectural level）层面，针对不同的任务构建不同的encoder-decoder结构，即不同的任务用不同的结构，和GPT-1类似。算法层面（algorithmic level），主要是利用语言模型的灵活性，将输入、输出、任务类型统一打包成新的输入。例如，对于翻译任务可以写成一个序列（translate to french, english text, french text），对于阅读理解可以写成（answer the question, document, question, answer）。给模型一个提示，让模型知道要做什么任务。
+
+不同于“预训练+微调”的范式，而是prompt的方式。
+
+1. 训练数据集
+   
+GPT-2的思想是尽可能使训练数据大且更加多样化，以此来学习到不同领域的知识，和之前的做法不同的是不再针对单个领域特定任务进行学习。
+
+使用Common Crawl是一个公开可获得通过抓取网页的数据集（信噪比很低，很多无用网页），使用reddit（新闻聚合网页）服务对其中一些网页进行分类，找到有价值信息，最终获得WebText数据集，包含了4500万个链接的文本数据，800M文本，40GB的数据。
+
+
+
+
+2. 模型
+   
+GPT-2的模型结构和GPT-1的模型结构类似，都是基于Transformer的。相对于GPT-1，做的修改有：
+
+1）调整Transformer的decoder： 将layer normalization移动到block的输入位置并且在最后一个self-attention之后加了一层 layer normalization。
+
+2）词典被扩展到了50257，context的维度从512提高到了1024并且batchsize采用了512。
+
+3）去掉了Fine-tune部分：使用了完全的无监督训练。这样使得预训练和Fine-tuning的结构完全一致。
+
+4）堆叠的层数增加：GPT-1使用的12层的TransformerDecoder，GPT-2分别使用了24、36、48层。
+
+
+![](image/2023-07-06-14-57.png)
+
+
+3. Zero-shot的prompt
+
+基本上是借鉴了文献[1]的方法，使用QA的模型设计一个通用框架解决10个NLP问题。整个过程类似下图。
+
+![](image/2023-07-06-15-47.png)
+
+[1] McCann B, Keskar N S, Xiong C, et al. The natural language decathlon: Multitask learning as question answering[J]. arXiv preprint arXiv:1806.08730, 2018.
+
+但其实部分原理就来自于于超大的预训练数据中包含的丰富文本知识。例如English2French的翻译任务，在预训练文本中会自然出现一些英法的对应文本如下（数据集本身）。而提示词的加入可以理解为尝试还原模型在以下场景中的上下文(Attention)
+
+![](image/2023-07-06-14-55.png)
+
+如何让模型针对不同的任务给出预测呢？作者通过在原始Input上加入任务相关提示词的方式，例如：
+
+（1）Translation；English = 输入； French = ？
+（2）Summarization；文章 + TL；DR：？，这里TL；DR是Too Long; Didn't Read的缩写，可类比‘一言以蔽之‘，会出现在大段文本的末尾作为总结升华，或者对话中。
+
+
+
+### 实验
+
+（1）语言建模Language Modeling （和Zero-shot方法比较）
+
+![](image/2023-07-06-15-28.png)
+
+语言建模的一个主要目标就是在zero-shot情况下提升表现，GPT-2系列的模型在8个zero-shot数据集中7个达到了sota。在小样本数据集Penn Treebank 和 WikiText-2提升也很大。
+
+（2）和监督方法比较
+
+![](image/2023-07-06-14-58.png)
+
+可以看出差别还是比较大的。
+
 
