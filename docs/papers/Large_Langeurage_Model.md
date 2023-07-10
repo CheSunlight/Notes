@@ -671,18 +671,35 @@ Fine-tuning with human feedback（标注？）：首先，收集一些“问题+
 
 1. 数据集
 
-（1）对于标注者（雇员），要求完成三类的prompts（问题或任务）：标注者写的任意的问题；标注者写指令（为该指令形成多个query/response对）；用户提供的一些应用场景所构建的任务。
+（1）对于标注者（标注工），要求完成三类的prompts（问题或任务）：标注者写的任意的问题；标注者写指令（为该指令形成多个query/response对）；用户提供的一些应用场景所构建的任务。在回答问题时，要考虑帮助性、真实性和无害性。
+
 > • Plain: We simply ask the labelers to come up with an arbitrary task, while ensuring the tasks had sufficient diversity.
 >
 > • Few-shot: We ask the labelers to come up with an instruction, and multiple query/response pairs for that instruction.
 >
 > • User-based: We had a number of use-cases stated in waitlist applications to the OpenAI API. We asked labelers to come up with prompts corresponding to these use cases.
 
-然后使用这些prompts进校fine-tuning，将模型放到网上（Playground）让用户免费使用，用户可能会再提一些问题，继续采集用户问题。根据用户ID划分训练和测试集（公平划分），过滤人名。
+然后使用这些prompts进校fine-tuning，将模型放到网上（Playground）让用户免费使用，用户会再提一些问题，继续采集用户问题。根据用户ID划分训练和测试集（公平划分），过滤人名等敏感信息。
+
+最后形成三个数据集：
+
+> (1) our SFT dataset, with labeler demonstrations used to train our SFT models, (2) our RM dataset, with labeler rankings of model outputs used to train our RMs, and (3) our PPO dataset, without any human labels, which are used as inputs for RLHF fine-tuning.
+
+文章有较为详细的标注过程。
+
+2. 任务
+
+（1）监督微调（SFT），即使用标注的数据集对整个GPT-3模型进行微调；
+
+（2）奖励建模（RM），去掉GPT-3的softmax层，加上一个输出维度为1的线性层，作为奖励输出。
+
+使用pairwise的ranking loss进校训练：
+
+希望排序高的奖励大于排序低的奖励，使用了logistic loss，希望预测值越大越好，公式中$K=9$（之前的工作$K=4$），每次选择36对进行训练。
 
 
 
-2. 
+
 
 # GPT-4 Technical Report
 
