@@ -626,12 +626,13 @@ GPT-3和GPT-2的模型差不多(Sparse Transformer），GPT-2和GPT-1差不多�
 3. 能耗
 
 
-# (InstructGPT) Training language models to follow instructions with human feedback
+# (InstructGPT/chatGPT) Training language models to follow instructions with human feedback
 
 #### 作者
  
 ![](image/2023-07-08-17-02.png)
 
+是一个joint project
 
 #### 收录情况
 
@@ -639,7 +640,7 @@ Neurips2022
 
 #### 背景知识
 
-ChatGPT使用的InstructGPT的基本框架，数据收集方式有些不同，ChatGPT使用的是GPT3.5的模型。GPT3.5应该是GPT3里加入github爬的Codex的数据，再在InstructGPT上加上人类一些少的标注数据。
+ChatGPT使用的是InstructGPT的基本框架，数据收集方式有些不同，ChatGPT使用的是GPT3.5的模型。GPT3.5应该是GPT3里加入github爬的Codex的数据，再在InstructGPT上加上人类一些少的标注数据。
 
 > In recent weeks, the internet has been going crazy with the new ChatGPT model. In general, ChatGPT is part of a series of releases around GPT 3.5 that are highlighting some of the capabilities of the upcoming GPT-4 model. One of the key differences of ChatGPT with previous models is its ability to follow instructions. This is powered another model called InstructGPT which OpenAI quietly unveiled at the beginning of the year.
 
@@ -656,20 +657,32 @@ ChatGPT使用的InstructGPT的基本框架，数据收集方式有些不同，Ch
 ![](image/2023-07-08-17-18.png)
 
 
-语言模型的目标是预测下一个词，和人类使用的意图是不aligned的。
+大语言模型的预训练目标仅仅是预测下一个词，和人类使用的意图是不alignment的。
 
 ### 主要思路
 
 Fine-tuning with human feedback（标注？）：首先，收集一些“问题+标注”的数据付GPT-3进行微调；其次，对一个问题可以控制模型产生不同的输出（概率采样），人类给答案进行质量排序，使用强化学习fine-tuning模型使它选择合适的答案。
 
-1.3B参数的InstructGPT性能超过了175B的GPT-3，而且答案的真实性提升很多。
+1.3B参数的InstructGPT性能超过了175B的GPT-3，而且答案的真实性提升很多（标注数据的信噪比高）。
 
 ![](image/2023-07-08-17-29.png)
 
 ### 方法框架
 
-未完待续。。。
+1. 数据集
 
+（1）对于标注者（雇员），要求完成三类的prompts（问题或任务）：标注者写的任意的问题；标注者写指令（为该指令形成多个query/response对）；用户提供的一些应用场景所构建的任务。
+> • Plain: We simply ask the labelers to come up with an arbitrary task, while ensuring the tasks had sufficient diversity.
+>
+> • Few-shot: We ask the labelers to come up with an instruction, and multiple query/response pairs for that instruction.
+>
+> • User-based: We had a number of use-cases stated in waitlist applications to the OpenAI API. We asked labelers to come up with prompts corresponding to these use cases.
+
+然后使用这些prompts进校fine-tuning，将模型放到网上（Playground）让用户免费使用，用户可能会再提一些问题，继续采集用户问题。根据用户ID划分训练和测试集（公平划分），过滤人名。
+
+
+
+2. 
 
 # GPT-4 Technical Report
 
