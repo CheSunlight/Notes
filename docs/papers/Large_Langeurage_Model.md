@@ -854,3 +854,25 @@ RLHF方法自动给出safety的reward
 
 ![](image/2023-07-09-20-44.png)
 
+# Sparks of Artificial General Intelligence: Early experiments with GPT-4
+
+概括下本文的核心思想，GPT-4的出现，在电光火石间向我们揭示了AGI的一种可能性，当然距离真正的AGI尚有很多路要走，我们通过对AGI的一些展望来结束本文。
+
+Confidence Calibration：现在的模型还不能理解什么时候它是在表达绝对正确的观点，而什么时候它又仅仅是在猜测而已。有时模型会捏造一些未在训练数据中出现过的子虚乌有的信息，有时甚至前后自相矛盾。这样的“hallucination”问题时常发生，尽管在一些有创造性的场景下也许这并不是什么坏事，但是这无疑为用户增加了一些不信任和顾虑。一种改进的思路是改进模型的Calibration（标定），允许模型在输出时能够提供类似信心的度量，从而可以在下游任务中进一步改善在部分场景下的效果；另一种改进的思路是结合外部的其他信息，比如外部的回答链接等，从而改进回答的质量。
+Long-term Memory：目前整体模型的上下文仍然比较有限（8000token左右），对于模型而言，能否执行阅读一本“大部头”等类似的书籍仍然是不确定的。
+Continual Learning：模型一旦训练完成，目前尚不具备持续学习，或者通过环境来改进自身的能力。尽管我们可以通过fine-tune的方式对模型进行微调，但是这却会导致模型在其他任务上的退化或者过拟合。同时考虑到训练数据漫长的处理周期，模型对于信息、事件、知识的时效性也是较难保证的。
+Personalization：目前模型尚不具备将高度个人化的信息进行协同、得到结果的能力---除非使用meta-prompt，但是这种方式往往比较局限，且效率较差。
+Planning and conceptual leaps：模型在部分需要“早做规划”的场景之中表现较差。
+Transparency, interpretability and consistency：在我们上面提到的“hallucination”问题之外，模型还有一个巨大的问题---它并不能够判断什么其输出是否与训练数据是自恰的。
+Cognitive fallacies and irrationality：模型在继承了人类智慧的同时，也继承了存在于训练数据之中人类的偏见、误差和错误。
+Challenges with sensitivity to inputs：模型的输出与prompt的输入、单词的顺序等都是息息相关的，非常小的调整都有可能导致输出截然不同的结果。
+在这里笔者认为出现了是原论文中最精彩的一段话：
+
+在罗列了上面的种种缺陷、问题之后，我们必须要回归原点并思考---作为一个next-word-predict-machine，究竟哪些问题是可以在这个前提下被解决？单纯的堆叠模型、数据？抑或是需要对整体的架构进行重构？
+
+也许在未来会有以下的这些扩展：
+
+调用外部组件（搜索引擎、计算器等）
+一种更深层次的“slow-thinking”机制而不是当前这种“fast-thinking”机制，允许模型在输出前进行更有效的规划
+一种long-term memory的结合方式，允许我们显式的对context进行处理。
+在single-word prediction之外，通过其他的启发式的方式对模型进行改造。
