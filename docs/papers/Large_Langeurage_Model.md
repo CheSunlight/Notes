@@ -908,3 +908,122 @@ Challenges with sensitivity to inputs：模型的输出与prompt的输入、单�
 在single-word prediction之外，通过其他的启发式的方式对模型进行改造。
 
 
+# Adaptive mixtures of local experts, Neural Computation
+
+
+### 作者
+
+Robert A. Jacobs, Micheal I. Jordan, Steven J. Nowlan, and Geoffrey E. Hinton
+
+麻省理工学院和多伦多大学
+
+### 研究动机
+
+数据集中存在一些天然的子集（比如来自不同的domain，不同的topic），用单个模型去学习，就会受到很多干扰（interference），导致学习很慢、泛化困难。
+
+ ### 研究方法
+
+ 一个系统包括多个分开的网络（专家），每个网络去处理训练样本的一个子集，使用一个门网络（gating network）来决定每个数据应该被哪个模型去训练，这样就可以减轻不同类型样本之间的干扰。
+ 
+ ![](image/2023-07-11-15-07.png)
+
+
+ 对于样本$c$，第$i$个expert的输出为$o_i^c$，真实的标签为$d^c$，那么之前工作的损失函数为
+
+ ![](image/2023-07-11-15-11.png)
+
+其中 $p_i^c$是 gating network 分配给每个 expert 的权重，相当于多个 expert共同作用得到输出。
+
+本文提出，这个方法存在一个严重的问题是：不同 expert 之间的互相影响会非常大，一个expert的参数改变了，其他的都会跟着改变，也就是说鼓励expert进行合作。因此，本文设计了一个新的loss函数，鼓励expert是竞争关系：
+
+ ![](image/2023-07-11-15-14.png)
+
+ 就是让不同的 expert 单独计算 loss，然后在加权求和得到总体的 loss。这样的话，每个专家，都有独立判断的能力，而不用依靠其他的 expert 来一起得到预测结果。
+
+此外，本文还提出了一个trick，对目标函数进行变体得到更好的效果（像softmax）：
+
+ ![](image/2023-07-11-15-15.png)
+
+这里指数化了再进行加权求和，然后取log。这么做的原因是梯度回传时，同时考虑当前expert和其他 experts 跟当前 sample $c$的匹配程度，求导如下
+
+ 
+ ![](image/2023-07-11-15-22.png)
+
+ 可以看出，前者的导数，只会跟当前 expert 有关。而后者导数中，如果当前 sample 跟其他的 experts 也比较匹配，那么 $E^c$ 对第 $i$个 expert 的输出的导数也会相对更小一下。
+
+
+# Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer
+
+### 作者
+
+Noam Shazeer, Azalia Mirhoseini, Krzysztof Maziarz*, Andy Davis, Quoc Le, Geoffrey Hinton
+and Jeff Dean
+
+Google Brain和Jagiellonian University（波兰雅盖隆大学）
+
+ICLR 2017
+
+### 背景知识
+
+条件计算（conditional computation）是指一类算法，其中每个输入样本使用模型的不同部分，从而平均减少计算、延迟或功率（取决于我们的目标）。引用Bengio 等人的话， “条件计算是指仅激活网络中的一些单元，以依赖于输入的方式。例如，如果我们认为我们正在看一辆汽车，我们只需要计算车辆检测单元的激活，而不是网络可能计算的所有特征中的一个。激活更少单元的直接效果是通过网络传播信息会更快，无论是在训练时还是在测试时。但是，需要能够以智能方式做出决定“打开和关闭哪些单元，具体取决于输入数据。这通常是通过某种形式的门控结构来实现的，与原始网络并行学习。”
+
+> Conditional computation, where parts of the network are active on a per-example basis, has been proposed in theory as a way of dramatically increasing model capacity without a proportional increase in computation.
+
+### 研究动机
+
+本文希望使用conditional computation做出极大的神经网络，但是在具体实现时，存在很多问题，例如：
+
+现代计算设备，尤其是 GPU，算术运算比分支运算快得多。 
+
+大batch对于性能至关重要，因为它们可以分摊参数传输和更新的成本。 而条件计算减少了网络中条件活动块的批量大小。
+
+网络带宽可能成为瓶颈。 GPU 集群的计算能力可能比设备间网络带宽的总和大数千倍。由于嵌入通常需要通过网络发送，因此（例如参数）交互的数量受到网络带宽而不是计算能力的限制等。
+
+### 思路
+
+这篇文章提出了 Sparsely-Gated Mixture-of-Experts layer ，声称终于解决了传统 conditional computational 的问题，在牺牲极少的计算效率的情况下，把模型规模提升1000多倍。
+
+
+### 方法 
+
+1. Sparsely-Gated Mixture-of-Experts layer
+   
+本文提出Sparsely-Gated Mixture-of-Experts layer，与1991年的工作相比，主要有两个区别
+
+
+Sparsely-Gated：不是所有expert都会起作用，而是极少数的expert会被使用来进行推理。这种稀疏性，也使得可以使用海量的experts来把模型容量做的超级大。
+
+token-level：前面那个文章，是 sample-level 的，即不同的样本，使用不同的experts，但是这篇则是 token-level 的，一个句子中不同的token使用不同的experts。
+
+这篇文章是在RNN的结构上加入了MoE layer
+
+ ![](image/2023-07-11-15-38.png)
+
+
+如图所示，每个token输入一个MoE Layer，每个MoE layer中包含了一堆的experts，每个expert都是一个小型的FFN，还有一个gating network会根据当前position的输入，选择少数几个expert来进行计算。
+
+2. Gating Network
+
+设$G(X)$和$E_i(x)$分别是 gating network 和第i个 expert 的输出，那么对于在当前position的输入$x$，输出就是所有 experts 的加权和：
+
+ ![](image/2023-07-11-15-41.png)
+
+但是这里可能有上千个 experts，如果每个都算的话，计算量会非常大，所以这里的一个关键就是希望$G(X)$的输出是稀疏的，只有部分的 experts 的权重是大于 0 的，其余等于 0 的 expert 直接不参与计算。作者加入了 sparsity 和 noise
+
+ ![](image/2023-07-11-15-42.png)
+
+ sparsity是通过 TopK sampling 的方式实现的，对于非 TopK 的部分，由于值是负无穷，这样在经过 softmax 之后就会变成 0，就相当于关门了。noise 项则可以使得不同 expert 的负载更加均衡。在具体实验中，作者使用的K=2~4.
+
+3. Expert Balancing
+
+作者在实验中发现，不同 experts 在竞争的过程中，会出现“赢者通吃”的现象：前期变现好的 expert 会更容易被 gating network 选择，导致最终只有少数的几个 experts 真正起作用。因此作者额外增加了一个 loss，来缓解这种不平衡现象，公式如下：
+
+ ![](image/2023-07-11-15-43.png)
+
+其中$X$代表的是一个batch的样本，把一个batch所有样本的gating weights加起来，然后计算coefficient of variation。总之，这个反映了不同 experts 之间不平衡的程度。最后这个 loss 会加到总体 loss 中，鼓励不同的 experts 都发挥各自的作用。
+
+
+
+
+
+
