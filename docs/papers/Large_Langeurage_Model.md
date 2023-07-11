@@ -676,8 +676,11 @@ Fine-tuning with human feedback（标注？）：首先，收集一些“问题+
 
 第一步，人工收集高质量<Prompt, Response范例>的数据集，训练有监督的精调模型SFT。先是从GPT API中收集了大家提交的Prompt，又让训练有素的标注人员手写了一批，形成了了高质量的Prompt的数据集。再对其中每个Prompt，人工撰写高质量的Response范例。这样就形成了高质量的任务导向的数据集。这些数据集，是面向GPT的使用用户的，虽然用户需求对应的学术上的NLU问题多种多样，但可以理解为是一个统一的任务。使用这个任务导向的数据集对GPT-3做精调可以显著提升其回应的质量。精调的目标是最大化P(Response|Prompt)。
 
+
+
 第二步，半自动地收集偏好数据集，训练Reward Model，用于后面RL精调时给Response打分。让SFT对每个Prompt输出多个Response，让标注人员标注哪个更好，形成对Response的偏好数据集。偏好只是说哪个比哪个好，而非哪个有多好。使用此偏好数据集训练Reward Model。对于同一个提示x，如果响应$y_i$优于响应 $y_j$，我们希望Reward Model给$y_i$打的分要比$y_j$高，其差值可类比于“人类偏好$y_i$多于 $y_j$，使用pairwise的ranking loss作为Reward Model的损失函数如下： 
 
+![](image/2023-07-11-09-19.png)
 
 希望排序高的奖励大于排序低的奖励，使用了logistic loss，希望预测值越大越好，公式中$K=9$（之前的工作中$K=4$，而且是softmax容易过拟合），每次选择36对进行训练。如此训练出来的Reward Model只考虑了相对分值的合理性，没有明确的锚点。可能打分普遍偏高，也可能普遍偏低。在使用之前，需要加一个bias，将模型输出均值调整到0附近。Reward Model参数规模60亿，说是参数再多会不稳定。
 
@@ -685,6 +688,7 @@ Fine-tuning with human feedback（标注？）：首先，收集一些“问题+
 
 在本文中，状态是Prompt和已经生成的Response片段，动作是下一个token。Reward在中间步骤都是0，只有在幕尾Response结束输出EOS才有奖励，折扣因子为1。目标函数为
 
+![](image/2023-07-11-09-20.png)
 
 其中$\pi^{RL}_\phi$是学习到的RL策略（GPT-3）模型，$\pi^{SFT}$是监督的训练模型，开始时模型是一致的。对于每个数据对，输入到当前模型$\pi^{RL}_\phi$产生$y$，然后输入到$r_\theta$的奖励模型中。
 
@@ -705,13 +709,16 @@ Fine-tuning with human feedback（标注？）：首先，收集一些“问题+
 
 然后使用这些prompts进校fine-tuning，将模型放到网上（Playground）让用户免费使用，用户会再提一些问题，继续采集用户问题。根据用户ID划分训练和测试集（公平划分），过滤人名等敏感信息。
 
+![](image/2023-07-11-09-17.png)
+
 最后形成三个数据集：
+
 
 > (1) our SFT dataset, with labeler demonstrations used to train our SFT models, (2) our RM dataset, with labeler rankings of model outputs used to train our RMs, and (3) our PPO dataset, without any human labels, which are used as inputs for RLHF fine-tuning.
 
 文章有较为详细的标注过程。
 
-
+![](image/2023-07-11-09-18.png)
 
 
 
@@ -719,6 +726,7 @@ Fine-tuning with human feedback（标注？）：首先，收集一些“问题+
 
 大概结果
 
+![](image/2023-07-11-09-21.png)
 
 ### 讨论
 
