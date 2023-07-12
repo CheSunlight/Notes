@@ -111,6 +111,13 @@ attention的好处就是可以得到任务指向的重要信息，而不是那�
 
 ### 论文信息
 
+attention 模型
+
+ ![](image/2023-07-12-10-36.png)
+ ![](image/2023-07-12-10-37.png)
+ ![](image/2023-07-12-10-38.png)
+网络架构
+
  ![](image/2023-07-03-17-35.png)
  
 不同于《NEURAL MACHINE TRANSLATION BY JOINTLY LEARNING TO ALIGN AND TRANSLATE》，本文完全抛弃了RNN和CNN等网络结构，设计了原始Transformer模型的结构。该模型由编码器和解码器两部分组成，这两个部分在后续模型中分离成两个独立的模块。此外，该论文还引入了缩放点积注意力机制 （Scaled Dot Product Attention Mechanism） 、多头注意力机制 （Multi-head Attention Blocks） 和位置编码 （Positional Input Encoding） 等概念，这些概念仍然是现代 Transformer 系列模型的基础。
