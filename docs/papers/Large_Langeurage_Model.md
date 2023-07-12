@@ -801,7 +801,7 @@ hindsight neglect任务指的是，本身用理性的结果做了决断，但是
 
 ![](image/2023-07-09-20-18.png)
 
-AMC微积分效果不好，Codeforces编程不熬，英语文学也不好
+AMC微积分效果不好，Codeforces编程不好，英语文学也不好
 
 ![](image/2023-07-09-20-20.png)
 
