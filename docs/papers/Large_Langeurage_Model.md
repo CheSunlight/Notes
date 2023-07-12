@@ -1030,3 +1030,6 @@ token-level：前面那个文章，是 sample-level 的，即不同的样本，�
 
 
 
+4. load-Balancing loss
+
+ ![](image/2023-07-12-20-07.png)
