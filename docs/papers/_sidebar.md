@@ -7,4 +7,5 @@
 - [Bayesian Solutions for the Factor Zoo: We Just Ran Two Quadrillion Models (Bryzgalova et al., 2023)](papers/bayesian_solutions_for_the_factor_zoo.md)
 - [Concept Drift](papers/concept_drift/README.md)
 - [Integrating Factor Models (Avramov et al., 2023)](papers/integrating_factor_models.md)
+- [Large Langeurage Model Survey](papers/Large_Langeurage_Model.md)
 - [Back to Homepage](README.md)
