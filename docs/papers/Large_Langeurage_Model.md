@@ -204,7 +204,7 @@ pre-trained word embedding存在两个问题，第一是并不清楚哪种优化
 
 2. 监督微调
 
-输入a sequence of input tokens $x^1,\codts,x^m$和标注$y$，经过预训练模型得到transformer blocks的输出$h_l^m$，输入到一个简单的线性层去预测y：
+输入a sequence of input tokens $x^1,\cdots,x^m$和标注$y$，经过预训练模型得到transformer blocks的输出$h_l^m$，输入到一个简单的线性层去预测y：
 
  ![](image/2023-07-03-20-19.png)
 
