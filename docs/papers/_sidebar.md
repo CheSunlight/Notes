@@ -8,4 +8,5 @@
 - [Concept Drift](papers/concept_drift/README.md)
 - [Integrating Factor Models (Avramov et al., 2023)](papers/integrating_factor_models.md)
 - [Large Langeurage Model Survey](papers/Large_Langeurage_Model.md)
+- [FactorVAE](papers/FactorVAE.md)
 - [Back to Homepage](README.md)
