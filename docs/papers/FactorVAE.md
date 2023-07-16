@@ -209,17 +209,6 @@ class FactorDecoder(nn.Module):
         sigma_y = sigma_alpha
         return mu_y, sigma_y
 
-    def predict(
-        self, e: torch.Tensor, mu_z: torch.Tensor, sigma_z: torch.Tensor
-    ) -> tuple[torch.Tensor]:
-        mu_alpha, sigma_alpha = self.alpha_layer(e)
-        beta = self.beta_layer(e)
-        mu_y = mu_alpha + torch.einsum("bnk, bk -> bn", beta, mu_z)
-        Sigma_z = torch.diag_embed(sigma_z**2)
-        Sigma_y = torch.bmm(torch.bmm(beta, Sigma_z), beta.permute(0, 2, 1))
-        Sigma_y += torch.diag_embed(sigma_alpha**2)
-        return mu_y, Sigma_y
-
 
 class AlphaLayer(nn.Module):
     def __init__(self, H: int, h_alpha_size: int) -> None:
