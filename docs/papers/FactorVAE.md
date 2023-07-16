@@ -396,6 +396,8 @@ information flow的计算推导如下：
  
 3. causalVAE的生成模型，将x编码为causal latent factor和noise factor $\hat{z}$，不仅有提取因果factors和噪声factors的能力，数学上也能以最大似然的推导设计合适的loss。
 
+![](image/2023-07-16-14-40.png)
+
 
 [1] Pearl, J. 2009. Causality. Cambridge university press.
 
