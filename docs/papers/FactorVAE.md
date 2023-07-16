@@ -20,9 +20,9 @@ Jian Li: https://people.iiis.tsinghua.edu.cn/~jianli/
  
 因子模型通过各种因素来解释市场现象和资产回报，这些因子可以是基本面、技术面、宏观经济等。具体来说，在因子模型中，股票收益由因子和对应的因子暴露（指因子对股票的影响）来描述，并由因子的线性组合计算。根据因子暴露是否随时间变化，因子模型分为两类：静态模型和动态模型。
 
-> In static factor models, the factor exposure of stock is time-invariant: CAPM, Fama-French three-factor model, and so on.
+> Static factor models: the factor exposure of stock is time-invariant: CAPM, Fama-French three-factor model, and so on.
 
-> factor exposure varies with time, and is usually calculated from the firm or asset characteristics (such as market capitalization, book-to-market ratio, asset liquidity)
+> Dynamic factor models: factor exposure varies with time, and is usually calculated from the firm or asset characteristics (such as market capitalization, book-to-market ratio, asset liquidity)
 
 2. VAE
 
