@@ -350,3 +350,53 @@ SFM（Zhang, Aggarwal, and Qi，2017）是一个RNN，使用离散傅里叶变�
 
 本文展示了如何学习一个有效的因子模型来预测横截面股票收益。具体来说，考虑到股票数据的低信噪比，我们提出了一个基于变异自动编码器（VAE）的概率动态因子模型。通过将因子视为VAE中的潜伏随机变量，所提出的具有内在随机性的模型可以对噪声数据进行建模并估计股票风险。为了从嘈杂的市场数据中提取有效的因子，文章提出了一种先验后验的学习方法，它可以有效地指导模型的学习。实验结果证明了模型的有效性。
 
+
+### CausalVAE的改进
+
+方法的本质是给因子进行伪标注（后验因子），再指导因子学习（先验因子）
+
+1. 因子伪标注的质量：后验因子（概率）$p(z|x,y)$虽然有future return作为条件，portfolio的mapping，但是如何保证学习到的隐因子能是好的、无噪声的、能直接影响定价的？
+2. 因子学习shortcut的问题：predictor用的deep networks学习从历史数据到伪标注因子的映射，容易受到噪声的干扰而学习到shortcut而非因果的映射。
+3. 数学推导：传统VAE的loss function严格按照生成模型的最大似然进行数学推导（严谨正确），这篇文章仅仅模仿VAE的loss function设计新的loss function。这里需要注意的是，VAE中是变分近似（后验-后验），通过下界的推导，得到用先验去近似后验的KL项。而本文的loss function是无法从生成模型（最大似然）中得到理论保证（甚至没有生成过程）。
+
+改进思路：
+
+大概模型框架如图
+
+![](image/2023-07-16-11-57.png)
+
+$z$表示causal latent factor, $\hat{z}$表示noise factor。causal factor是指能够影响最终return预测的因子，noise factor指的是不能影响return预测的因子，但是两个共同决定了输入历史数据的生成（重建），能显式地将噪声排除在预测return的factor之外。
+
+1. causal latent factor $z$ 到return的预测$\hat{y}$施加causal influence，保证因果性且排除偶然相关性，并进行反事实优化，确保“后验因子”和“先验因子”能（因果）影响到return的预测。
+
+因果效应Causal Influence：
+
+Pearl 2009 [1] and O’Shaughnessy et al. 2020 [2] introduces the information flow to measure the causal influence of the learned representation on the output of the predictor.
+
+information flow的计算推导如下：
+
+![](image/2023-07-16-12-13.png)
+
+通过施加information flow的形式保证causal influence。
+
+反事实学习：
+
+人们对周围发生的事情进行因果推理或因果归因时，常常产生如果改变某种条件，那么结果就不会发生的 ‘如果...那么...’  (if/then)  或如果不改变某种条件，结果也会发生的 ‘如果不...那么...’  (but/for)  的思维方式，这种在心理上对于过去已经发生的事件进行否定而构建一种可能性假设的思维活动，被称为反事实思维 (Counterfactual thinking)。
+
+假设一个结构因果模型$M$定义如下
+
+![](image/2023-07-16-12-19.png)
+
+如果我们强制让$X=x$，这个操作无疑也改变了$X$的来源，所以d得到新的结构因果模型
+
+2. 使用shared memory模块，而无需进行“先验-后验学习”，输入为${x,y}$和$x$的模型共享memory，保证factors是从同一个空间得到的，解决“先验因子”学习可能的shortcuts的问题
+
+
+![](image/2023-07-16-12-26.png)
+ 
+3. causalVAE的生成模型，将x编码为causal latent factor和noise factor $\hat{z}$，不仅有提取因果factors和噪声factors的能力，数学上也能以最大似然的推导设计合适的loss。
+
+
+[1] Pearl, J. 2009. Causality. Cambridge university press.
+
+[2] O’Shaughnessy, M. R.; Canal, G.; Connor, M.; Rozell, C.; and Davenport, M. A. 2020. Generative causal explanations of black-box classifiers. In Larochelle, H.; Ranzato, M.; Hadsell, R.; Balcan, M.; and Lin, H., eds., Proc. Adv. Neural Inf. Process. Syst.
